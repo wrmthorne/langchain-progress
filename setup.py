@@ -5,11 +5,12 @@ import re
 __version__ = '0.0.0.dev0'
 
 _deps = [
-    'langchain_community<=0.0.28',
-    'ray[tune]<=2.9.3',
-    'responses<=0.25.0',
+    'InstructorEmbedding',
+    'langchain_community',
+    'ray[tune]',
+    'responses',
     'sentence-transformers<=2.2.2',
-    'tqdm<=4.66.2',
+    'tqdm',
 ]
 
 deps = {b: a for a, b in (re.findall(r"^(([^!=<>~ ]+)(?:[!=<>~ ].*)?$)", x)[0] for x in _deps)}
@@ -24,7 +25,7 @@ EXTRAS = {
     'ray': deps_list('ray[tune]'),
     'tqdm': deps_list('tqdm'),
     'all': deps_list('ray[tune]', 'tqdm'),
-    'dev': deps_list('ray[tune]', 'responses', 'sentence-transformers', 'tqdm'),
+    'dev': deps_list('ray[tune]', 'responses', 'sentence-transformers', 'tqdm', 'InstructorEmbedding'),
 }
 
 setup(
@@ -34,7 +35,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=REQUIRED_PKGS,
-    extras_required=EXTRAS,
+    extras_require=EXTRAS,
     python_requires='>=3.9',
     long_description=open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
