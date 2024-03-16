@@ -62,7 +62,7 @@ class ProgressManager:
     def __init__(self, cls, pbar=None) -> None:
         self.cls = cls
         self.pbar = pbar
-        self.state = []
+        self._state = []
 
         if not isinstance(cls, Embeddings):
             raise TypeError(f'cls must be an instance of Embeddings, not {type(cls)}')
@@ -98,7 +98,7 @@ class ProgressManager:
 
         method_attribute = _AttributeState(class_to_mutate, method_to_wrap, self._wrapped_method)
         self.original_method = method_attribute.original_value
-        self.state.append(method_attribute)
+        self._state.append(method_attribute)
 
                     
     def _wrapped_method(self, input: List[str], *args, **kwargs) -> List[List[float]]:
@@ -108,5 +108,5 @@ class ProgressManager:
     
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        for state in self.state:
+        for state in self._state:
             state.restore_state()

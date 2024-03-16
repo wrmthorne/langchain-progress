@@ -30,7 +30,7 @@ with ProgressManager(embeddings, pbar):
 
 ### Ray Example
 
-The real use-case for this context manager is when using ray or multiprocessing to improve embedding speed. If `show_progress=True` is enabled for embeddings objects, a new  progress bar is created for each process. This causes fighting while drawing each individual progress bar, causing the progress bar to be redrawn for each update on each process. This approach also doesn't allow us to report to a single progress bar across all remotes for a unified indication of progress. Using the ProgressManager context manager we can solve these problems
+The real use-case for this context manager is when using ray or multiprocessing to improve embedding speed. If `show_progress=True` is enabled for embeddings objects, a new  progress bar is created for each process. This causes fighting while drawing each individual progress bar, causing the progress bar to be redrawn for each update on each process. This approach also doesn't allow us to report to a single progress bar across all remotes for a unified indication of progress. Using the ProgressManager context manager we can solve these problems:
 
 ```python
 from ray.experimental import tqdm_ray

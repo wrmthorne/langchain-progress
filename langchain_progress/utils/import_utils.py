@@ -17,3 +17,7 @@ def is_ray_installed() -> bool:
 def is_tqdm_installed() -> bool:
     '''Determines if tqdm is installed'''
     return importlib.util.find_spec('tqdm') is not None
+
+def is_instructor_embedding_installed() -> bool:
+    '''Determines if the instructor embeddings are installed'''
+    return importlib.util.find_spec('InstructorEmbedding') is not None

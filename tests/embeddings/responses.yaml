@@ -1,0 +1,18 @@
+responses:
+
+# HuggingFaceHubEmbeddings
+- response:
+    url: https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-mpnet-base-v2
+    method: POST
+    status: 200
+    content_type: application/json
+    body: '[[0.1], [0.2], [0.3], [0.4], [0.5]]'
+    auto_calculate_content_length: false
+
+- response:
+    url: https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2
+    method: POST
+    status: 200
+    content_type: application/json
+    body: '[[0.1], [0.2], [0.3], [0.4], [0.5]]'
+    auto_calculate_content_length: false

@@ -70,8 +70,6 @@ class TestPBarWrapper(unittest.TestCase):
         self.assertEqual(tqdm_state['x'], 1)
         ray.shutdown()
 
-        print('did this test')
-
     @requires_tqdm
     @patch('logging.info')
     def test_init_no_pbar_provided(self, mock_info):
