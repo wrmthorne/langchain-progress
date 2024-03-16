@@ -29,7 +29,7 @@ EXTRAS = {
 }
 
 setup(
-    name='lanchain_progress',
+    name='langchain_progress',
     license='MIT License',
     url='https://github.com/wrmthorne/langchain-progress',
     packages=find_packages(),
