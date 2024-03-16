@@ -24,13 +24,12 @@ EXTRAS = {
     'ray': deps_list('ray[tune]'),
     'tqdm': deps_list('tqdm'),
     'all': deps_list('ray[tune]', 'tqdm'),
-    'dev': deps_list('ray[tune]', 'responses', 'sentence-transformers', 'tqdm', ),
+    'dev': deps_list('ray[tune]', 'responses', 'sentence-transformers', 'tqdm'),
 }
 
 setup(
     name='lanchain_progress',
     license='MIT License',
-    classifiers=[],
     url='https://github.com/wrmthorne/langchain-progress',
     packages=find_packages(),
     include_package_data=True,
