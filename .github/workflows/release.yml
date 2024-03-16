@@ -54,8 +54,9 @@ jobs:
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          poetry run semantic-release version
-          poetry run semantic-release publish
+          semantic-release version
+          git pull
+          semantic-release publish
       - name: Publish to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
