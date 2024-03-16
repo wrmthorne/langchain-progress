@@ -54,12 +54,22 @@ jobs:
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          semantic-release version
+          poetry run semantic-release version
           git pull
-          semantic-release publish
+          poetry run semantic-release publish
       - name: Publish to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
           password: ${{ secrets.TEST_PYPI_API_TOKEN }}
           repository_url: https://test.pypi.org/legacy/
+      - name: Check TestPyPI publishing status
+        if: steps.publish-to-test-pypi.outcome == 'success'
+        run: echo "Package published to TestPyPI successfully."
+      - name: Publish to PyPI
+        if: steps.publish-to-test-pypi.outcome == 'success'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          repository_url: https://upload.pypi.org/legacy/
