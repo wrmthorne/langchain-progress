@@ -36,7 +36,7 @@ InstructorEmbedding = "^1.0.1"
 python-semantic-release = "^9.1.1"
 
 [tool.semantic_release]
-version_variable = [
+version_variables = [
     "langchain_progress/__init__.py:__version__",
     "pyproject.toml:version"
 ]
