@@ -1,78 +1,163 @@
 name: Release
+
 on:
-  workflow_dispatch:
   workflow_call:
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.9', '3.10', '3.11']
-
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Poetry
-        run: |
-          python -m pip install --upgrade pip
-          pip install poetry
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: 'poetry'
-      - name: Install dependencies
-        run: |
-          poetry install
-      - name: Run tests
-        run: |
-          poetry run python -m unittest
-
-  release:
-    needs: build
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ['3.9', '3.10', '3.11']
+
+    outputs:
+      pkg-name: ${{ steps.check-version.outputs.pkg-name }}
+      version: ${{ steps.check-version.outputs.version }}
+
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Install Poetry
+      - name: Install poetry
         run: pipx install poetry
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "poetry"
+          cache: release
 
       - name: Install dependencies
         run: poetry install
 
-      - name: Prepare package for release
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      - name: Run tests
+        run: poetry run python -m unittest
+
+      - name: Check Version
+        id: check-version
+        shell: bash
         run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-          poetry build
+          echo pkg-name="$(poetry version | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+          echo version="$(poetry version --short)" >> $GITHUB_OUTPUT
 
-      - name: Create Changelog
-        uses: saadmk11/changelog-ci@v1.1.2
+  test-pypi-publish:
+    needs: build
+    uses: ./.github/workflows/_test_release.yml
+
+  pre-release-checks:
+    needs:
+      - build
+      - test-pypi-publish
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install poetry
+        run: pipx install poetry
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
         with:
-          github_token: ${{ secrets.GH_TOKEN }}
-          release_version: ${{ github.event.inputs.release_version }}
+          python-version: ${{ matrix.python-version }}
+          # Don't use caching to make testing maximally sensitive to batching breakage
 
-  
-      - name: Publish to TestPyPI
+      - name: Import published package
+        shell: bash
+        env:
+          PKG_NAME: ${{ needs.build.outputs.pkg-name }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          poetry run pip install --extra-index-url https://test.pypi.org/simple/"$PKG_NAME==$VERSION" || \
+          ( sleep 5 && poetry run pip install --extra-index-url https://test.pypi.org/simple/"$PKG_NAME==$VERSION" )
+
+          IMPORT_NAME="$(echo "$PKG_NAME" | sed s/-/_/g)"
+          poetry run python -c "import $IMPORT_NAME; print(dir($IMPORT_NAME))"
+
+      - name: Import test dependencies
+        run: poetry install --with test
+
+      - name: Import published package (again)
+        shell: bash
+        env:
+          PKG_NAME: ${{ needs.build.outputs.pkg-name }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          poetry run pip install --extra-index-url https://test.pypi.org/simple/"$PKG_NAME==$VERSION"
+
+      - name: Run tests
+        run: poetry run python -m unittest
+
+  publish:
+    needs: 
+      - build
+      - test-pypi-publish
+      - pre-release-checks
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install poetry
+        run: pipx install poetry
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: release
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
-          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-          repository-url: https://test.pypi.org/legacy/
+          password: ${{ secrets.PYPI_API_TOKEN }}
 
-      # Check if TestPyPI build was a success before publishing to PyPI and creating release
-      
+  mark-release:
+    needs:
+      - build
+      - test-pypi-publish
+      - pre-release-checks
+      - publish
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install poetry
+        run: pipx install poetry
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: release
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Create release
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          tag: ${{ needs.build.outputs.version }}
+          artifacts: dist/*
+          commit: main
+          generateReleaseNotes: true
+          draft: false
