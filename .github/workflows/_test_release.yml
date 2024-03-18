@@ -21,7 +21,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-          cache: release
+          cache: 'poetry'
 
       - name: Build project for distribution
         run: poetry build
