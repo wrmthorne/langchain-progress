@@ -82,8 +82,8 @@ jobs:
           PKG_NAME: ${{ needs.build.outputs.pkg-name }}
           VERSION: ${{ needs.build.outputs.version }}
         run: |
-          poetry run pip install --extra-index-url https://test.pypi.org/simple/"$PKG_NAME==$VERSION" || \
-          ( sleep 5 && poetry run pip install --extra-index-url https://test.pypi.org/simple/"$PKG_NAME==$VERSION" )
+          poetry run pip install --extra-index-url https://test.pypi.org/simple/ "$PKG_NAME==$VERSION" || \
+          ( sleep 5 && poetry run pip install --extra-index-url https://test.pypi.org/simple/ "$PKG_NAME==$VERSION" )
 
           IMPORT_NAME="$(echo "$PKG_NAME" | sed s/-/_/g)"
           poetry run python -c "import $IMPORT_NAME; print(dir($IMPORT_NAME))"
@@ -97,7 +97,7 @@ jobs:
           PKG_NAME: ${{ needs.build.outputs.pkg-name }}
           VERSION: ${{ needs.build.outputs.version }}
         run: |
-          poetry run pip install --extra-index-url https://test.pypi.org/simple/"$PKG_NAME==$VERSION"
+          poetry run pip install --extra-index-url https://test.pypi.org/simple/ "$PKG_NAME==$VERSION"
 
       - name: Run tests
         run: poetry run python -m unittest
