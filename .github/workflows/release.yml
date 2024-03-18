@@ -41,8 +41,14 @@ jobs:
       - name: Install dependencies
         run: poetry install
 
-      - name: Run tests
-        run: poetry run python -m unittest
+      - name: Build project for distribution
+        run: poetry build
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
 
       - name: Check Version
         id: check-version
@@ -131,8 +137,9 @@ jobs:
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
+          packages-dir: dist/
+          verbose: true
+          print-hash: true
 
   mark-release:
     needs:
@@ -165,8 +172,8 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           token: ${{ secrets.GH_TOKEN }}
-          tag: ${{ needs.build.outputs.version }}
-          artifacts: dist/*
+          tag: v${{ needs.build.outputs.version }}
+          artifacts: 'dist/*'
           commit: main
           generateReleaseNotes: true
           draft: false
