@@ -26,7 +26,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-          cache: release
+          cache: 'poetry'
 
       - name: Install dependencies
         run: poetry install
@@ -111,7 +111,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-          cache: release
+          cache: 'poetry'
 
       - uses: actions/download-artifact@v4
         with:
@@ -145,7 +145,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-          cache: release
+          cache: 'poetry'
 
       - uses: actions/download-artifact@v4
         with:
