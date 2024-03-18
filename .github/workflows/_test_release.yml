@@ -2,14 +2,17 @@ name: Test Release
 
 on:
   workflow_call:
+    inputs:
+      python-version:
+        description: 'Python version'
+        required: true
+        default: '3.10'
+        type: string
 
 jobs:
   build:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.9', '3.10', '3.11']
 
     steps:
       - uses: actions/checkout@v4
@@ -17,10 +20,10 @@ jobs:
       - name: Install Poetry
         run: pipx install poetry
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python ${{ inputs.python-version }}
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ inputs.python-version }}
           cache: 'poetry'
 
       - name: Build project for distribution

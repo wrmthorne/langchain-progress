@@ -4,13 +4,23 @@ on:
   workflow_call:
   workflow_dispatch:
 
+env:
+  PYTHON_VERSION: '3.10'
+
 jobs:
+  # Workaround to pass PYTHON_VERSION to context rather than steps
+  env-vars:
+    name: Get Environment vars
+    runs-on: ubuntu-latest
+    outputs:
+      PYTHON_VERSION: ${{ env.PYTHON_VERSION }}
+
+    steps:
+      - run: echo "Fetching environment variables"
+
   build:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.9', '3.10', '3.11']
 
     outputs:
       pkg-name: ${{ steps.check-version.outputs.pkg-name }}
@@ -22,11 +32,11 @@ jobs:
       - name: Install poetry
         run: pipx install poetry
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: 'poetry'
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: release
 
       - name: Install dependencies
         run: poetry install
@@ -42,27 +52,28 @@ jobs:
           echo version="$(poetry version --short)" >> $GITHUB_OUTPUT
 
   test-pypi-publish:
-    needs: build
+    needs: 
+      - env-vars
+      - build
     uses: ./.github/workflows/_test_release.yml
+    with:
+      python-version: ${{ needs.env-vars.outputs.PYTHON_VERSION }}
 
   pre-release-checks:
     needs:
       - build
       - test-pypi-publish
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.9', '3.10', '3.11']
 
     steps:
       - uses: actions/checkout@v4
       - name: Install poetry
         run: pipx install poetry
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ env.PYTHON_VERSION }}
           # Don't use caching to make testing maximally sensitive to batching breakage
 
       - name: Import published package
@@ -97,9 +108,6 @@ jobs:
       - test-pypi-publish
       - pre-release-checks
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.9', '3.10', '3.11']
 
     steps:
       - uses: actions/checkout@v4
@@ -107,11 +115,11 @@ jobs:
       - name: Install poetry
         run: pipx install poetry
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: 'poetry'
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: release
 
       - uses: actions/download-artifact@v4
         with:
@@ -131,9 +139,6 @@ jobs:
       - pre-release-checks
       - publish
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.9', '3.10', '3.11']
 
     steps:
       - uses: actions/checkout@v4
@@ -141,11 +146,11 @@ jobs:
       - name: Install poetry
         run: pipx install poetry
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: 'poetry'
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: release
 
       - uses: actions/download-artifact@v4
         with:
