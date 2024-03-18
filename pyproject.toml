@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langchain-progress"
-version = "0.0.0"
+version = "0.1.0"
 description = "Wrapper for nicely displaying progress bars for langchain embedding components when using multiprocessing or ray."
 authors = ["William Thorne <wthorne1@sheffield.ac.uk>"]
 license = "MIT"

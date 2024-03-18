@@ -5,12 +5,11 @@ A module that adds a context manager to wrap lanchain embedding elements to bett
 
 ## Installing
 
-The library can be installed as python package from this repo (will be released on PyPi in the future):
+The library can be installed using PyPI:
 
 ```bash
-pip install git+https://github.com/wrmthorne/langchain-progress
+pip install langchain-progress
 ```
-
 
 ## How to Use
 
