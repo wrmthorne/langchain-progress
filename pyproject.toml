@@ -30,10 +30,13 @@ tqdm = "<=4.66.2"
 [tool.poetry.group.dev.dependencies]
 ray = {extras = ["tune"], version = ">=2.4.0"}
 tqdm = "<=4.66.2"
+
+[tool.poetry.group.test.dependencies]
+ray = {extras = ["tune"], version = ">=2.4.0"}
+tqdm = "<=4.66.2"
 responses = "<=0.25.0"
 sentence-transformers = "<=2.2.2"
 InstructorEmbedding = "<=1.0.1"
-python-semantic-release = "<=9.1.1"
 
 [tool.semantic_release]
 version_toml = [

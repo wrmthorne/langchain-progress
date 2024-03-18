@@ -54,7 +54,7 @@ pbar.close.remote()
 
 ## Tests
 
-To run the test suit, you can run the following command from the root directory. Tests will be skipped if the required optional libraries are not installed:
+To run the test suite, you can run the following command from the root directory. Tests will be skipped if the required optional libraries are not installed:
 
 ```bash
 python -m unittest
