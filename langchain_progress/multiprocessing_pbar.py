@@ -18,7 +18,7 @@ class MultiprocessingPBar:
             The total number of iterations to complete. If not provided, the progress bar will
             be indeterminate.
     '''
-    def __init__(self, pbar: tqdm = None, total: int = None) -> None:
+    def __init__(self, pbar: 'tqdm' = None, total: int = None) -> None:
         self.pbar = pbar
         self.total = total
         self.context_alive = Value('b', False)
@@ -28,7 +28,7 @@ class MultiprocessingPBar:
                 '`tqdm` is not installed. Please install `tqdm` to use MultiprocessingPBar.')
         elif pbar is None:
             self.pbar = tqdm(total=total)
-        elif not isinstance(pbar, tqdm):
+        elif is_tqdm_installed() and not isinstance(pbar, tqdm):
             raise TypeError('`pbar` must be an instance of `tqdm.tqdm`.')
 
     def _tqdm_process(self) -> None:
