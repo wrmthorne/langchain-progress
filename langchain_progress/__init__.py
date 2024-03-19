@@ -1,1 +1,2 @@
 from .progress_manager import ProgressManager
+from .multiprocessing_pbar import MultiprocessingPBar

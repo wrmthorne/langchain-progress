@@ -36,9 +36,11 @@ from ray.experimental import tqdm_ray
 
 @ray.remote(num_gpus=1)
 def process_shard(shard, pbar):
-    embeddings = HuggingFaceEmbeddings('sentence-transformers/all-MiniLM-L6-v2')
+    embeddings = HuggingFaceEmbeddings(model_name='sentence-transformers/all-MiniLM-L6-v2')
+
     with ProgressManager(embeddings, pbar):
         result = FAISS.from_documents(shard, embeddings)
+
     return result
 
 # Create ray progress bar
@@ -50,6 +52,31 @@ vectors = ray.get([process_shard.remote(shard, pbar) for shard in doc_shards])
 
 pbar.close.remote()
 ```
+
+A full example can be found in `./examples/ray_example.py`.
+
+### Multiprocessing Example
+
+To simplify implementing progress bars with multiprocessing, the `MultiprocessingPBar` context manager handles the creation and updating of the shared progress bar processes. The following is the recommended way to create progress bars using multiprocessing:
+
+```python
+from langchain_progress import MultiprocessingPBarManager
+
+def process_shard(shard, pbar):
+    embeddings = HuggingFaceEmbeddings(model_name='sentence-transformers/all-MiniLM-L6-v2')
+
+    with ProgressManager(embeddings, pbar):
+        result = FAISS.from_documents(shard, embeddings)
+
+    return result
+
+doc_shards = np.array_split(docs, num_shards)
+
+with MultiprocessingPBar(total=len(docs)) as pbar, Pool(num_shards) as pool:
+    vectors = pool.starmap(process_shard, [(shard, pbar) for shard in doc_shards])
+```
+
+A full example can be found in `./examples/multiprocessing_example.py`.
 
 ## Tests
 
