@@ -11,6 +11,13 @@ The library can be installed using PyPI:
 pip install langchain-progress
 ```
 
+If you only need a subset of the library's features, you can install dependencies for your chosen setup:
+
+```bash
+pip install langchain-progress[tqdm]
+pip install langchain-progress[ray]
+```
+
 ## How to Use
 
 This context manager can be used in a single-process or across a distributed process such as ray to display the process of generating embeddings using langchain. The ProgressManager context manager requires that a langchain embedding object be provided and optionally accepts a progress bar. If no progress bar is provided, a new progress bar will be created using tqdm. An important note is that if using `show_progress=True` when instantiating an embeddings object, any internal progress bar created within that class will be replaced with one from langchain-progress.
