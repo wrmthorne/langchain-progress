@@ -54,7 +54,7 @@ def process_shard(shard, pbar):
 
 doc_shards = np.array_split(docs, num_shards)
 
-with RayPbar(total=len(docs)) as pbar:
+with RayPBar(total=len(docs)) as pbar:
     vectors = ray.get([process_shard.remote(shard, pbar) for shard in doc_shards])
 
 pbar.close.remote()
