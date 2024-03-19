@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class Wrapper:
-    def __init__(self, pbar, total=None):
+    def __init__(self, pbar: ProgressBar, total: int = None) -> None:
         self.pbar = pbar
 
         if not is_ray_installed() and not is_tqdm_installed():
@@ -112,10 +112,10 @@ class PBarWrapper(Wrapper):
         
 
 class TRangeWrapper(Wrapper):
-    def __init__(self, pbar):
+    def __init__(self, pbar: ProgressBar) -> None:
         super().__init__(pbar)
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> 'TRangeWrapper':
         self.range = range(*args)
         step = self.range.step or 1
         self.index = self.range.start - step # To account for first batch
@@ -123,10 +123,10 @@ class TRangeWrapper(Wrapper):
         self.range = iter(self.range)
         return self
         
-    def __iter__(self):
+    def __iter__(self) -> 'TRangeWrapper':
         return self
     
-    def __next__(self):
+    def __next__(self) -> int:
         if (item := next(self.range)) is not None:
             # Prevent overflow of the progress bar
             diff = min(self.stop, item + (item - self.index)) - item

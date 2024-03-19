@@ -29,10 +29,12 @@ with ProgressManager(embeddings, pbar):
 
 ### Ray Example
 
-The real use-case for this context manager is when using ray or multiprocessing to improve embedding speed. If `show_progress=True` is enabled for embeddings objects, a new  progress bar is created for each process. This causes fighting while drawing each individual progress bar, causing the progress bar to be redrawn for each update on each process. This approach also doesn't allow us to report to a single progress bar across all remotes for a unified indication of progress. Using the ProgressManager context manager we can solve these problems:
+The real use-case for this context manager is when using ray or multiprocessing to improve embedding speed. If `show_progress=True` is enabled for embeddings objects, a new  progress bar is created for each process. This causes fighting while drawing each individual progress bar, causing the progress bar to be redrawn for each update on each process. This approach also doesn't allow us to report to a single progress bar across all remotes for a unified indication of progress. Using the `ProgressManager` context manager we can solve these problems. We can also use the `RayPBar` context manager to simplify the setup and passing of ray progress bars. The following is the recommended way to create progress bars using ray:
 
 ```python
 from ray.experimental import tqdm_ray
+
+from langchain_progress import RayPBar
 
 @ray.remote(num_gpus=1)
 def process_shard(shard, pbar):
@@ -43,12 +45,10 @@ def process_shard(shard, pbar):
 
     return result
 
-# Create ray progress bar
-remote_tqdm = ray.remote(tqdm_ray.tqdm)
-pbar = remote_tqdm.remote(total=len(docs))
-
 doc_shards = np.array_split(docs, num_shards)
-vectors = ray.get([process_shard.remote(shard, pbar) for shard in doc_shards])
+
+with RayPbar(total=len(docs)) as pbar:
+    vectors = ray.get([process_shard.remote(shard, pbar) for shard in doc_shards])
 
 pbar.close.remote()
 ```

@@ -1,9 +1,7 @@
-from time import sleep
 import unittest
 from unittest.mock import patch
 
 from langchain_progress import MultiprocessingPBar
-from langchain_progress.utils.import_utils import is_tqdm_installed
 from .testing_utils import requires_tqdm
 
 
@@ -28,7 +26,7 @@ class TestMultiprocessingPbar(unittest.TestCase):
 
             self.assertEqual(str(e.exception), '`pbar` must be an instance of `tqdm.tqdm`.')
 
-    def test_init_without_tqdm_and_installed(self):
+    def test_init_without_tqdm_installed(self):
         # Test with no existing tqdm but installed
         with patch('langchain_progress.multiprocessing_pbar.is_tqdm_installed', return_value=False):
             with self.assertRaises(ImportError) as e:

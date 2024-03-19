@@ -7,9 +7,8 @@ from langchain_community.vectorstores import FAISS
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import numpy as np
 import ray
-from ray.experimental import tqdm_ray
 
-from langchain_progress import ProgressManager
+from langchain_progress import ProgressManager, RayPBar
 
 
 @ray.remote
@@ -38,13 +37,10 @@ def main(args):
     text_splitter = RecursiveCharacterTextSplitter()
     docs = text_splitter.create_documents([doc])
 
-    # Create ray progress bar
-    remote_tqdm = ray.remote(tqdm_ray.tqdm)
-    pbar = remote_tqdm.remote(total=len(docs))
-
     doc_shards = np.array_split(docs, args.num_shards)
-    vectors = ray.get([process_shard.remote(shard, idx, pbar) for idx, shard in enumerate(doc_shards)])
-    pbar.close.remote()
+
+    with RayPBar(total=len(docs)) as pbar:
+        vectors = ray.get([process_shard.remote(shard, idx, pbar) for idx, shard in enumerate(doc_shards)])
 
     vector_store = vectors[0]
     for vectors_i in vectors[1:]:
