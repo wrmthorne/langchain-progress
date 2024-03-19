@@ -21,7 +21,7 @@ class RayPBar:
             raise ImportError(
                 '`ray` is not installed. Please install `ray` to use RayPBar.')
         
-    def __enter__(self) -> ray.actor.ActorHandle:
+    def __enter__(self) -> 'ray.actor.ActorHandle':
         remote_tqdm = ray.remote(tqdm_ray.tqdm)
         self.pbar = remote_tqdm.remote(total=self.total)
 
