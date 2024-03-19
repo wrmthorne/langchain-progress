@@ -1,4 +1,4 @@
-import importlib
+import importlib.util
 from typing import Union
 
 from typing import TYPE_CHECKING
