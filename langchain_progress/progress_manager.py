@@ -11,8 +11,6 @@ from langchain_community.embeddings import (
     HuggingFaceInstructEmbeddings,
     OllamaEmbeddings,
 )
-from tqdm import trange
-from functools import partial
 
 from .wrappers import PBarWrapper, TRangeWrapper
 

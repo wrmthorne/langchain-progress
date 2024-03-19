@@ -1,3 +1,4 @@
+import gc
 import unittest
 from unittest.mock import patch
 
@@ -6,6 +7,8 @@ from .testing_utils import requires_tqdm
 
 
 class TestMultiprocessingPbar(unittest.TestCase):
+    def tearDown(self):
+        gc.collect()
 
     @requires_tqdm
     def test_init_with_tqdm(self):

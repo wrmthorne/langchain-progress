@@ -1,4 +1,3 @@
-import gc
 from functools import wraps
 from typing import Optional
 import unittest

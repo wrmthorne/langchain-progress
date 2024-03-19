@@ -1,3 +1,4 @@
+import gc
 import unittest
 from unittest.mock import patch
 
@@ -6,6 +7,9 @@ from .testing_utils import requires_ray
 
 
 class TestRayPBar(unittest.TestCase):
+    def tearDown(self):
+        gc.collect()
+
     def test_init_without_tqdm_installed(self):
         # Test with no existing tqdm but installed
         with patch('langchain_progress.ray_pbar.is_ray_installed', return_value=False):
