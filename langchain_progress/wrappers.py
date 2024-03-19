@@ -1,4 +1,5 @@
 import logging
+from multiprocessing.managers import AutoProxy
 import operator
 from typing import List, Union
 
@@ -14,24 +15,12 @@ if is_ray_installed():
 if is_tqdm_installed():
     from tqdm import tqdm
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)  
 
 
-class PBarWrapper:
-    '''
-    Wrapper class to allow for progress bar updates when iterating over a list of texts. Wraps
-    around the list of texts and updates the progress bar when an item is accessed.
-    
-    Parameters:
-        texts (`List[str]`): The list of texts to iterate over.
-        pbar (`ray.actor.ActorHandle` or `tqdm.tqdm`): The remote function to update the progress
-            bar.
-    '''
-    def __init__(self, texts: List[str], pbar: ProgressBar) -> None:
-        self.texts = texts
+class Wrapper:
+    def __init__(self, pbar, total=None):
         self.pbar = pbar
-        self._update = None
-        self.index = 0
 
         if not is_ray_installed() and not is_tqdm_installed():
             raise ModuleNotFoundError(
@@ -43,16 +32,40 @@ class PBarWrapper:
             self._update = self.pbar.update.remote
 
         elif is_tqdm_installed() and isinstance(pbar, tqdm):
-            self._update = self.pbar.update
+            self._update = self.pbar.update          
 
         elif is_tqdm_installed() and pbar is None:
             logger.info('No progress bar supplied. Creating a new tqdm progress bar.')
-            self.pbar = tqdm(total=len(self.texts))
+            self.pbar = tqdm(total=total)
             self._update = self.pbar.update
 
         else:
-            raise ValueError(
-                'No valid progress bar found. Valid types are ray.actor.ActorHandle and tqdm.tqdm.')
+            try:
+                # Try putting a value into the progress bar queue
+                self.pbar.put(0)
+                self._update = self.pbar.put
+                logger.info(
+                    'Using multiprocessing progress bar. Assuming process is setup to consume updates.')
+            except:
+                raise ValueError(
+                    'No valid progress bar found. Valid types are ray.actor.ActorHandle and tqdm.tqdm.')
+
+
+class PBarWrapper(Wrapper):
+    '''
+    Wrapper class to allow for progress bar updates when iterating over a list of texts. Wraps
+    around the list of texts and updates the progress bar when an item is accessed.
+    
+    Parameters:
+        texts (`List[str]`): The list of texts to iterate over.
+        pbar (`ray.actor.ActorHandle` or `tqdm.tqdm`): The remote function to update the progress
+            bar.
+    '''
+    def __init__(self, texts: List[str], pbar: ProgressBar) -> None:
+        super().__init__(pbar, total=len(texts))
+
+        self.texts = texts
+        self.index = 0
 
     def __len__(self) -> int:
         return len(self.texts)
@@ -96,3 +109,29 @@ class PBarWrapper:
         
         except TypeError:
             raise TypeError(f'Invalid index type {type(index)}')
+        
+
+class TRangeWrapper(Wrapper):
+    def __init__(self, pbar):
+        super().__init__(pbar)
+
+    def __call__(self, *args, **kwargs):
+        self.range = range(*args)
+        step = self.range.step or 1
+        self.index = self.range.start - step # To account for first batch
+        self.stop = self.range.stop
+        self.range = iter(self.range)
+        return self
+        
+    def __iter__(self):
+        return self
+    
+    def __next__(self):
+        if (item := next(self.range)) is not None:
+            # Prevent overflow of the progress bar
+            diff = min(self.stop, item + (item - self.index)) - item
+            self.index = item
+            self._update(diff)
+            return item
+        
+        raise StopIteration

@@ -22,10 +22,11 @@ class TestHuggingFaceBgeEmbeddings(EmbeddingsTesterMixin, unittest.TestCase):
         self.tester = EmbeddingsTester(self)
 
     def test_with_encode(self):
-        self.tester.test_embedding_class(
+        self.tester.test_replace_pbar_attribute(
             embedding_class=HuggingFaceBgeEmbeddings,
             wrapped_class_name='client',
             wrapped_method_name='encode',
+            pbar_name='trange',
         )
 
 
@@ -34,18 +35,20 @@ class TestHuggingFaceEmbeddings(EmbeddingsTesterMixin, unittest.TestCase):
         self.tester = EmbeddingsTester(self)
 
     def test_with_encode(self):
-        self.tester.test_embedding_class(
+        self.tester.test_replace_pbar_attribute(
             embedding_class=HuggingFaceEmbeddings,
             wrapped_class_name='client',
             wrapped_method_name='encode',
+            pbar_name='trange',
         )
 
     def test_with_encode_multi_process(self):
-        self.tester.test_embedding_class(
+        self.tester.test_replace_pbar_attribute(
             embedding_class=HuggingFaceEmbeddings,
             wrapped_class_name='client',
             wrapped_method_name='encode_multi_process',
             multi_process=True,
+            pbar_name='trange',
         )
 
 
@@ -96,10 +99,11 @@ class TestHuggingFaceInstructEmbeddings(EmbeddingsTesterMixin, unittest.TestCase
 
     @requires_instructor_embedding
     def test_with_encode(self):
-        self.tester.test_embedding_class(
+        self.tester.test_replace_pbar_attribute(
             embedding_class=HuggingFaceInstructEmbeddings,
             wrapped_class_name='client',
             wrapped_method_name='encode',
+            pbar_name='trange',
         )
 
 

@@ -2,15 +2,26 @@ import gc
 import unittest
 from unittest.mock import patch
 
-from langchain_progress.wrappers import PBarWrapper
+from langchain_progress.wrappers import (
+    TRangeWrapper,
+    PBarWrapper,
+    Wrapper,
+)
 from .testing_utils import (
     requires_tqdm,
     requires_ray,
     surpress_warning,
 )
 
+class MockQueue:
+    def __init__(self):
+        self.n = 0
 
-class TestPBarWrapper(unittest.TestCase):
+    def put(self, n):
+        self.n += n
+
+
+class TestWrapper(unittest.TestCase):
     def setUp(self):
         self.texts = ['text1', 'text2', 'text3', 'text4', 'text5']
 
@@ -20,38 +31,47 @@ class TestPBarWrapper(unittest.TestCase):
     def test_init_no_pbar_none_installed(self):
         '''Tests initialization with no progress bar provided and no packages installed.'''
         with (patch('langchain_progress.wrappers.is_tqdm_installed', return_value=False),
-             patch('langchain_progress.wrappers.is_ray_installed', return_value=False)):
-            with self.assertRaises(ImportError):
-                PBarWrapper(self.texts, None)
+              patch('langchain_progress.wrappers.is_ray_installed', return_value=False)):
+            with self.assertRaises(ModuleNotFoundError):
+                Wrapper(None)
 
     def test_init_no_pbar_no_tqdm_installed(self):
         '''Tests initialization with no progress bar provided and tqdm not installed.'''
         with patch('langchain_progress.wrappers.is_tqdm_installed', return_value=False):
             with self.assertRaises(ValueError):
-                PBarWrapper(self.texts, None)
+                Wrapper(None)
+
+    def test_init_multiprocessing_queue_as_pbar(self):
+        '''Tests initialization with a multiprocessing queue as the progress bar.'''
+        with self.assertLogs() as logs:
+            wrapper = Wrapper(MockQueue(), total=len(self.texts))
+
+        self.assertEqual(
+            logs.output,
+            ['INFO:langchain_progress.wrappers:Using multiprocessing progress bar. Assuming '
+             'process is setup to consume updates.']
+        )
+        self.assertIsInstance(wrapper.pbar, MockQueue)
+        self.assertEqual(wrapper._update.__name__, MockQueue().put.__name__)
 
     @requires_tqdm
-    @patch('logging.info')
-    def test_init_tqdm_provided(self, mock_info):
+    def test_init_tqdm_provided(self):
         '''Tests initialization with a tqdm progress bar provided.'''
         from tqdm import tqdm
 
         pbar = tqdm(self.texts)
-        wrapper = PBarWrapper(self.texts, pbar)
+        wrapper = Wrapper(pbar, total=len(self.texts))
 
         self.assertIsInstance(wrapper.pbar, tqdm)
-        self.assertFalse(mock_info.called)
 
         # Test update function
         wrapper._update(1)
         self.assertEqual(pbar.n, 1)
 
-
     # Surpress until https://github.com/ray-project/ray/issues/9546 is resolved
     @surpress_warning(warning=ResourceWarning)
     @requires_ray
-    @patch('logging.info')
-    def test_init_ray_provided(self, mock_info):
+    def test_init_ray_provided(self):
         '''Tests initialization with a ray progress bar provided.'''
         import ray
         from ray.experimental import tqdm_ray
@@ -59,10 +79,9 @@ class TestPBarWrapper(unittest.TestCase):
         ray.init()
         remote_tqdm = ray.remote(tqdm_ray.tqdm)
         pbar = remote_tqdm.remote(total=len(self.texts))
-        wrapper = PBarWrapper(self.texts, pbar)
+        wrapper = Wrapper(pbar, total=len(self.texts))
 
         self.assertIsInstance(wrapper.pbar, ray.actor.ActorHandle)
-        self.assertFalse(mock_info.called)
 
         # Test update function
         wrapper._update(1)
@@ -71,17 +90,29 @@ class TestPBarWrapper(unittest.TestCase):
         ray.shutdown()
 
     @requires_tqdm
-    @patch('logging.info')
-    def test_init_no_pbar_provided(self, mock_info):
+    def test_init_no_pbar_provided(self):
         '''Tests initialization with no tqdm progress bar provided.'''
 
-        wrapper = PBarWrapper(self.texts, None)
+        with self.assertLogs() as logs:
+            wrapper = Wrapper(None, total=len(self.texts))
+
         self.assertEqual(wrapper.pbar.total, len(self.texts))
-        # mock_info.assert_called_once_with('No progress bar supplied. Creating a new tqdm progress bar.')
+        self.assertEqual(
+            logs.output,
+            ['INFO:langchain_progress.wrappers:No progress bar supplied. Creating a new tqdm progress bar.']
+        )
 
         # Test update function
         wrapper._update(1)
         self.assertEqual(wrapper.pbar.n, 1)
+
+
+class TestPBarWrapper(unittest.TestCase):
+    def setUp(self):
+        self.texts = ['text1', 'text2', 'text3', 'text4', 'text5']
+
+    def tearDown(self) -> None:
+        gc.collect()
 
     @requires_tqdm
     def test_len(self):
@@ -128,6 +159,42 @@ class TestPBarWrapper(unittest.TestCase):
 
         with self.assertRaises(IndexError):
             wrapper[len(self.texts) + 1]
+
+
+class TestTRangeWrapper(unittest.TestCase):
+    def setUp(self):
+        self.mock_queue = MockQueue()
+        self.wrapper = TRangeWrapper(self.mock_queue)
+
+    def tearDown(self):
+        gc.collect()
+
+    def test_call_batch_size_one(self):
+        '''Tests the call method of the wrapper.'''
+        wrapper = self.wrapper(5)
+
+        self.assertEqual(wrapper.index, -1)
+        self.assertEqual(wrapper.stop, 5)
+
+        for i in wrapper:
+            self.assertEqual(i, wrapper.index)
+
+        self.assertEqual(i, 4)
+
+    def test_call_with_final_batch_overflow(self):
+        '''Tests the call method of the wrapper with a final batch that overflows.'''
+        step_size = 2
+        wrapper = self.wrapper(0, 5, step_size)
+
+        self.assertEqual(wrapper.index, -step_size)
+        self.assertEqual(wrapper.stop, 5)
+
+        for i in wrapper:
+            self.assertEqual(i, wrapper.index)
+
+        # Checks to see that the number of pushes to the pbar matches the stop value
+        self.assertEqual(self.mock_queue.n, 5)
+
 
 
 if __name__ == '__main__':

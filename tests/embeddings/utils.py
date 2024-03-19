@@ -2,6 +2,7 @@ import gc
 from unittest.mock import patch
 
 from langchain_progress import ProgressManager
+from langchain_progress.wrappers import TRangeWrapper
 
 
 class MockPBarWrapper(list):
@@ -37,6 +38,29 @@ class EmbeddingsTester:
         self.parent.assertEqual(len(vectors), len(self.parent.texts))
         self.parent.assertNotEqual(getattr(wrapped_class, wrapped_method_name).__func__, ProgressManager._wrapped_method)
 
+    
+    def test_replace_pbar_attribute(self, embedding_class=None, wrapped_class_name=None, wrapped_method_name=None, pbar_name=None, *model_args, **model_kwargs):
+        embedding_instance = embedding_class(*model_args, **model_kwargs)
+
+        wrapped_class = getattr(embedding_instance, wrapped_class_name, embedding_instance)
+
+        self.parent.assertNotEqual(
+            getattr(wrapped_class, wrapped_method_name).__globals__[pbar_name].__name__, 
+            TRangeWrapper.__call__.__name__
+        )
+
+        with ProgressManager(embedding_instance):
+            self.parent.assertEqual(
+                getattr(wrapped_class, wrapped_method_name).__globals__[pbar_name].__name__,
+                TRangeWrapper.__call__.__name__
+            )
+            vectors = embedding_instance.embed_documents(self.parent.texts)
+
+        self.parent.assertEqual(len(vectors), len(self.parent.texts))
+        self.parent.assertNotEqual(
+            getattr(wrapped_class, wrapped_method_name).__globals__[pbar_name].__name__,
+            TRangeWrapper.__call__.__name__
+        )
 
     @patch('langchain_progress.progress_manager.PBarWrapper', MockPBarWrapper)
     def test_unwrappable_embedding_class(self, embedding_class=None, wrapped_class_name=None, wrapped_method_name=None, *model_args, **model_kwargs):

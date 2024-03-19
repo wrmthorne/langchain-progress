@@ -11,8 +11,10 @@ from langchain_community.embeddings import (
     HuggingFaceInstructEmbeddings,
     OllamaEmbeddings,
 )
+from tqdm import trange
+from functools import partial
 
-from .wrappers import PBarWrapper
+from .wrappers import PBarWrapper, TRangeWrapper
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +23,7 @@ logger = logging.getLogger(__name__)
 class _AttributeState:
     '''Class to store the state of a modified attribute and restore it after use.'''
     cls: Any = field(
-        metadata={'help': 'The class or method to mutate an attribute of.'}
+        metadata={'help': 'The class, method or dict to mutate an attribute of.'}
     )
     attr_name: str = field(
         metadata={'help': 'The name of the attribute to mutate.'}
@@ -32,17 +34,24 @@ class _AttributeState:
 
     def __post_init__(self) -> None:
         '''Store the original value of the attribute and then update it with the new value.'''
-        self.original_value = getattr(self.cls, self.attr_name, None)
+        if isinstance(self.cls, dict):
+            self.original_value = self.cls.get(self.attr_name, None)
+            self.cls[self.attr_name] = self.mutated_value
+        else:
+            self.original_value = getattr(self.cls, self.attr_name, None)
+            # object.__setattr__ because pydantic doesn't allow setting methods with setattr
+            object.__setattr__(self.cls, self.attr_name, self.mutated_value)
 
         if self.original_value is None:
             raise ValueError(f'Attribute {self.attr_name} not found in {self.cls}')
         
-        # object.__setattr__ because pydantic doesn't allow setting methods with setattr
-        object.__setattr__(self.cls, self.attr_name, self.mutated_value)
 
     def restore_state(self) -> None:
         '''Restore the original value of the attribute.'''
-        object.__setattr__(self.cls, self.attr_name, self.original_value)
+        if isinstance(self.cls, dict):
+            self.cls[self.attr_name] = self.original_value
+        else:
+            object.__setattr__(self.cls, self.attr_name, self.original_value)
 
 
 class ProgressManager:
@@ -82,6 +91,10 @@ class ProgressManager:
                 method_to_wrap = 'encode_multi_process'
             else:
                 method_to_wrap = 'encode'
+
+            method_to_wrap = getattr(self.cls.client, method_to_wrap)
+            self._state.append(_AttributeState(method_to_wrap.__globals__, 'trange', TRangeWrapper(self.pbar).__call__))
+            return
             
         elif isinstance(self.cls, (
             HuggingFaceHubEmbeddings,
